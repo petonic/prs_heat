@@ -7,7 +7,7 @@ import sys
 
 import time
 
-from gpio_thermo_debug import Thermostat
+from gpio_thermo_pithy import Thermostat
 
 thermo = Thermostat()
 

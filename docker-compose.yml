@@ -1,9 +1,0 @@
-version: '2'
-services:
-  timestamp:
-    build: .
-    ports:
-     - "80:80"
-    priveleged: true
-  volumes:
-    - /dev:/dev     # Needed for GPIO
