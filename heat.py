@@ -57,7 +57,7 @@ def set_status(status):
       humid: <float>Temperature from sensor
       target: <int>Target temperature
 
-    The returned dict is used in the 'result' template.
+    The returned dict is used in the 'status' template.
     """
     global heat_mode, heat_target
 
@@ -89,20 +89,20 @@ def set_status(status):
 # Return the current fan/heat status and the temperature/humid
 @route('/')
 @route('/status')
-@view('result')
+@view('status')
 def index():
     my_dict = set_status(None)
     return my_dict
 
 @route('/off')
-@view('result')
+@view('status')
 def turn_system_off():
     my_dict = set_status('Off')
     return my_dict
 
 @route('/on/<target:int>')
 @route('/on')
-@view('result')
+@view('status')
 def turn_heat_on_target(target=None):
     if target:
         try:
@@ -177,7 +177,7 @@ def rest_refresh():
 
 @route('/set/<temp:float>')
 @route('/set/<temp:float>,<humid:float>')
-@view('result')
+@view('status')
 def set_conditions(temp=None, humid=None):
     """
     This route is used to artificially set the simulated temperature
