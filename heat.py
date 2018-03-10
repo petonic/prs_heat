@@ -1,14 +1,25 @@
 #!/usr/bin/env python3
 
-from bottle import route, run, template
+from bottle import route, run, template, view
 import bottle
 import datetime
 import sys
+
+bottle.TEMPLATES.clear()
 
 # TODO: Fire off another async process from docker container that launches
 # a web request every 5 minutes to have it refresh the status when
 # the heat is on -- checks to turn it off, and in the other direction,
 # checks to turn it on if its too cold.
+
+
+######################################################
+# Globals
+######################################################
+
+heat_target = 0
+heat_mode = 'Off'
+
 
 
 def get_conditions():
@@ -23,50 +34,81 @@ def get_status():
     """
     return ('off', 'off')
 
-def generate_html_page(system_status):
+
+def set_status(status):
     """
-    Uses the template to generate an HTML page that indicates the current
-    system status, as well as whether we just turned ON or OFF the system.
-    An empty value of 'operation' will mean to just show the system status
-    without turning on or off the fans/heat.
+    Sets the fan/heat status to 'status' (None, 'Off', <int>):
+      - None: Just gets temp/humid values for rendering status
+      - 'Off': Does above, but also shuts heat/fan off
+      - <int>: Turns the heat on and sets internal heat limit to <int>
+
+    Function returns the system status (after any actions) as a dict:
+      mode: 'On', 'Off', <int>
+      temp: <float>Temperature from sensor
+      humid: <float>Temperature from sensor
+      target: <int>Target temperature
+
+    The returned dict is used in the 'result' template.
     """
-    try:
-        (temp, humid) = get_conditions()
-    except:
-        return template('error', 'getting conditions')
+    global heat_mode, heat_target
 
-    try:
-        (stat_heat, stat_fan) = get_status()
-    except:
-        return template('error', 'getting environmental status')
-
-    print('Going to call template on ({})'.format(repr((
-            system_status, stat_heat, stat_fan,temp,humid))))
-
-    return template('result', operation=system_status, stat_heat=stat_heat,
-                    stat_fan=stat_fan, temp=temp, humid=humid)
+    (temp, humid) = get_conditions()
+    return_value = {'mode':heat_mode, 'target':heat_target,
+                    'temp':temp, 'humid':humid}
+    if status == None:
+        print('Status request')
+        return return_value
+    if status == 'Off':
+        print('Turning off heater')
+        heat_mode = 'Off'
+        return_value['mode'] = heat_mode
+        return return_value
+    # Must be request to set target to certain temperature and turn on
+    # the heat
+    print('Turning on the heater')
+    heat_mode = 'On'
+    heat_target = status
+    return_value['target'] = heat_target
+    return_value['mode'] = heat_mode
+    print('\t*** Return_Value = {}'.format(repr(return_value)))
+    return return_value
 
 # Return the current fan/heat status and the temperature/humid
 @route('/')
 @route('/status')
+@view('result')
 def index():
-    print('Generating index')
-    generate_html_page(None)
+    my_dict = set_status(None)
+    return my_dict
 
-@route('off')
+@route('/off')
+@view('result')
 def turn_system_off():
-    pass    # Pretend that we're turning the system off
-    return generate_html_page('off')
+    my_dict = set_status('Off')
+    return my_dict
 
 @route('/on/<temp>')
-def turn_heat_on(temp='72'):
+@view('result')
+def turn_heat_on_target(temp='72'):
     try:
         num_temp = int(temp)
     except:
         return template('error', error='Not a number, request must be "/on/<num>"')
-    pass    # Pretend we're turning on the heat to num_temp degrees
-    return generate_html_page(num_temp)
 
+    my_dict = set_status(num_temp)
+    return my_dict
+
+@route('/on')
+@view('result')
+def turn_heat_on():
+    my_dict = set_status(heat_target)
+    return my_dict
+
+
+
+################################################
+# Main Program
+################################################
 
 default_port = 80
 
