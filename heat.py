@@ -2,12 +2,14 @@
 
 from bottle import route, run, template, view
 import bottle
-import datetime
+from datetime import datetime
 import sys
 
 import time
 
 from gpio_thermo_pithy import Thermostat
+
+
 
 thermo = Thermostat()
 
@@ -35,6 +37,7 @@ default_interval = 5
 heat_target = 0
 heat_mode = False
 
+LOGFILE = '/var/log/heatweb.log'
 
 
 def get_status():
@@ -170,9 +173,23 @@ def rest_refresh():
     for heating.  Written this way with this additional layer of rest_refresh()
     because I want other functions to also call do_thermostat_things() as well
     for when new parameters are set.add
+
+    Also, logs the current status into a logfile in /var/log/webheat.log
+    {"mode": false, "humid": 1.0, "gpio_state": false, "target": 0, "temp": 69.98000068664551}
     """
     do_thermostat_things()
     my_dict = set_status(None)
+    now_string = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    log_dict = my_dict
+    log_dict['mode'] = 'HEAT-ON' if my_dict['mode'] else 'heat-off'
+    log_dict['gpio_state'] = '---GPIOS-ON---' if \
+        my_dict['gpio_state'] else 'gpios-off'
+
+    with open(LOGFILE, 'a') as logf:
+        print('{},{},{},{:.2f},{:.2f},{}'.format(
+                now_string, log_dict['mode'], log_dict['target'],
+                log_dict['temp'], log_dict['humid'], log_dict['gpio_state']),
+              file=logf)
     return my_dict
 
 @route('/set/<temp:float>')
