@@ -1,9 +1,0 @@
-#!/usr/bin/env python3
-
-from bottle import route, run, template
-
-@route('/hello/<name>')
-def index(name):
-    return template('hello', name=name)
-
-run(host='0.0.0.0', port=8080)
