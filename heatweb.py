@@ -31,7 +31,7 @@ hyst_high = 1.0
 
 # Default values
 default_port = 80
-default_interval = 5
+default_interval = 60*5                         # seconds
 
 # Initial values for globals
 heat_target = 0
